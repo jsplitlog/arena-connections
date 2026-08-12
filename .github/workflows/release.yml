@@ -1,0 +1,97 @@
+name: Release
+
+# Publishes the installable artifacts users are pointed at from README's
+# "Install" section: one load-unpacked zip per target from `npm run package`,
+# plus the signed Firefox .xpi when AMO credentials are configured.
+#
+# `dist/` is git-ignored (see docs/cross-browser-plan.md, WS4), so a release is
+# the only place a prebuilt extension exists. Tagging is the deliberate act
+# that produces one: push a `v<version>` tag matching package.json.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# The default token scope is read-only here; only the `publish` job — which
+# never runs npm install scripts — is handed `contents: write`.
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    # `secrets` is not available to step-level `if`, so surface the AMO
+    # credentials as env vars and branch on those instead.
+    env:
+      WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+      WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - run: npm ci
+
+      # The zip filenames come from package.json's version, so a tag that
+      # disagrees with it would publish v0.3.0 containing 0.2.0 artifacts.
+      # manifest.base.json is checked too — AMO rejects a re-signed version,
+      # and that file is what it reads.
+      - name: Check the tag matches package.json and manifest.base.json
+        run: node scripts/check-release-version.mjs "$GITHUB_REF_NAME"
+
+      - run: npm test
+
+      - name: Build and zip every target
+        run: npm run package
+
+      # Unsigned Firefox builds can only be loaded temporarily, so the .xpi is
+      # what makes a Firefox install persist. Never block a release on it:
+      # AMO rejects a version it has already signed, and its validation queue
+      # is an external dependency.
+      - name: Sign the Firefox build (unlisted)
+        if: env.WEB_EXT_API_KEY != '' && env.WEB_EXT_API_SECRET != ''
+        continue-on-error: true
+        run: npm run sign:firefox
+
+      - name: Warn when Firefox signing was skipped
+        if: env.WEB_EXT_API_KEY == '' || env.WEB_EXT_API_SECRET == ''
+        run: echo "::warning::WEB_EXT_API_KEY/WEB_EXT_API_SECRET are not set, so no signed .xpi is attached. Firefox users can only load this release temporarily. See docs/firefox.md."
+
+      # The *-webstore.zip is deliberately excluded: it has Chrome's `key`
+      # stripped for Store upload, so loading it unpacked yields a per-machine
+      # extension ID whose OAuth redirect URI is not registered with Are.na and
+      # sign-in fails. Users get the plain chrome zip; j uploads the store one
+      # from a local `npm run package` (see docs/store-readiness.md).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            dist/*.zip
+            dist/*.xpi
+            !dist/*-webstore.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: artifacts
+
+      - name: Create the release and upload the artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            artifacts/*

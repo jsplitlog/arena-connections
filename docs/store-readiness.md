@@ -1,8 +1,9 @@
 # Chrome Web Store readiness checklist
 
-Are.na Connections currently ships as a local build (`npm run build:chrome`,
-then load `dist/chrome` unpacked) and is not yet published to the Chrome Web
-Store. This checklist covers what is left before a first store release.
+Are.na Connections currently ships as a GitHub Release zip that users load
+unpacked (or a local `npm run build:chrome` → `dist/chrome`) and is not yet
+published to the Chrome Web Store. This checklist covers what is left before a
+first store release.
 
 ## Manifest `key` and OAuth redirect
 
@@ -23,8 +24,12 @@ everyone who installs from the Store.
       unpacked-dev redirect.
 - [x] Keep `key` in the repo's `public/manifest.chrome.json` (unpacked
       installs need it for a stable ID) and strip it only in the store zip —
-      done: `npm run package` strips it in the zip's staging copy while
-      `dist/chrome/manifest.json` on disk keeps it.
+      done: `npm run package` emits two Chrome zips from one build, the plain
+      one keeping `key` for load-unpacked installs and
+      `*-webstore.zip` stripping it in a staging copy, while
+      `dist/chrome/manifest.json` on disk keeps it. The release workflow
+      attaches only the plain zip, since a `key`-less unpacked install gets a
+      per-machine ID whose redirect URI is unregistered.
 - [ ] Confirm sign-in works end-to-end from a Store-installed (or draft
       test) build before announcing the release.
 
@@ -78,9 +83,12 @@ everyone who installs from the Store.
 
 - [ ] Choose and add a `LICENSE` file — no license is currently committed;
       this is the repo owner's call to make before a public store listing.
-- [ ] Once the Store listing exists, update the README's "Install in
-      Chrome" section to link the listing (keep the unpacked instructions
-      as a secondary/dev path if desired).
-- [ ] Build the Store upload zip with `npm run package` (it rebuilds from
-      source and strips `key` automatically); never upload a `dist/` folder
-      zipped by hand.
+- [ ] Once the Store listing exists, update the README's "Install → Chrome"
+      section to link the listing (keep the release-zip instructions as a
+      secondary/dev path if desired).
+- [ ] Build the Store upload zip with `npm run package` and upload
+      **`dist/arena-connections-chrome-<version>-webstore.zip`** — the
+      `key`-stripped one. The plain `arena-connections-chrome-<version>.zip`
+      keeps `key` because it is the load-unpacked artifact attached to GitHub
+      Releases; uploading that one to the Store is rejected. Never upload a
+      `dist/` folder zipped by hand.

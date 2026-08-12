@@ -13,77 +13,74 @@ follow your browsing in the background.
 - Chrome 116 or later, Firefox 115 or later, or Safari 18 or later (the
   documented Develop → Add Temporary Extension flow; Safari 16.4–17 works via
   the Xcode route in [docs/safari.md](docs/safari.md))
-- Node.js `20.19+` or `22.12+` and npm, to build the extension
 - An Are.na Premium account (the v3 search endpoint requires Premium)
 
-## Install a development build
+Building from source additionally needs Node.js `20.19+` or `22.12+` and npm,
+but installing from a release does not.
 
-Every browser starts the same way — get the source and build it:
+## Install
 
-1. From this repository's **Code** menu, choose **Download ZIP** (or clone it).
-2. Unzip it somewhere you will keep it; the browser loads the extension from
-   that folder, so don't delete it afterwards.
-3. In that folder, run `npm ci`, then the build for your browser below.
+Are.na Connections isn't in any browser's extension store yet, so you install
+it by hand from a **[release](../../releases/latest)** — no build tools, no
+Node, no command line for Chrome and Firefox.
 
-How you load the result differs a lot per browser, and only Chrome is as
-simple as "build and import". The short version:
+Find your browser below. How much work this is genuinely differs per browser,
+and that's the browsers' doing, not the extension's:
 
-| Browser | Effort | Survives a browser restart? |
-| --- | --- | --- |
-| Chrome | Build, load folder | Yes |
-| Firefox | Build, load file | Only if signed (free, ~5 min setup) |
-| Safari (macOS) | Build, needs Xcode installed | No — re-enable each launch |
-| Safari (iOS) | Build, needs Xcode + Simulator | Simulator only |
+| Your browser | What you download | Effort | Survives a restart? |
+| --- | --- | --- | --- |
+| **Chrome** | `arena-connections-chrome-<version>.zip` | Unzip, load folder | Yes |
+| **Firefox** | the `.xpi` file | Install the file | Yes |
+| **Safari (macOS)** | source | Needs Xcode | No — re-enable each launch |
+| **Safari (iOS)** | source | Needs Xcode + Simulator | Simulator only |
+
+Not sure which you have? Chrome and Firefox are the easy ones — if you're on
+one of those, you're two minutes away.
 
 ### Chrome
 
-```sh
-npm run build:chrome
-```
+1. Download `arena-connections-chrome-<version>.zip` from the
+   [latest release](../../releases/latest).
+2. Unzip it somewhere you'll keep it — Chrome loads the extension from that
+   folder, so don't delete it afterwards.
+3. Open `chrome://extensions`.
+4. Turn on **Developer mode** (top right).
+5. Click **Load unpacked** and select the unzipped folder.
+6. Optionally pin **Are.na Connections** from the Extensions menu.
 
-1. Open `chrome://extensions`.
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and select the `dist/chrome` folder.
-4. Optionally pin **Are.na Connections** from the Extensions menu.
+To update: download the new zip, replace the folder's contents, then click
+**Reload** on the extension's card.
 
-To update: rebuild, then click **Reload** on the extension's card.
+Other Chromium browsers (Edge, Brave, Arc) use the same zip and the same
+`Load unpacked` flow, but they aren't tested — Chrome is what's verified.
 
 ### Firefox
 
-```sh
-npm run build:firefox
-```
+Download the `.xpi` file from the [latest release](../../releases/latest), then
+open `about:addons` → the gear icon → **Install Add-on From File…** → select
+it.
 
-**Quick, but temporary.** Open `about:debugging#/runtime/this-firefox` →
-**Load Temporary Add-on…** → select `dist/firefox/manifest.json`. The add-on
-is removed when you quit Firefox.
+That file is signed by Mozilla, which is what lets it stay installed. Release
+Firefox refuses to install unsigned extensions permanently, and
+`xpinstall.signatures.required` only works on Developer Edition, Nightly, and
+ESR.
 
-Note the Add-ons manager's "Install Add-on From File…" will *not* accept this —
-it only takes a signed `.xpi`, and greys out `manifest.json`.
+If a release has no `.xpi` attached, signing wasn't configured or Mozilla's
+validation failed for that version; you can still load a build temporarily via
+`about:debugging#/runtime/this-firefox` → **Load Temporary Add-on…**, which
+lasts until you quit Firefox. Signing it yourself takes a free Mozilla account
+— see [docs/firefox.md](docs/firefox.md).
 
-**Permanent, needs a free Mozilla account.** Release Firefox refuses to install
-unsigned extensions permanently; `xpinstall.signatures.required` only works on
-Developer Edition, Nightly, and ESR. The fix is unlisted signing — nothing is
-published, listed, or reviewed:
-
-1. Create an account at
-   [addons.mozilla.org/developers](https://addons.mozilla.org/developers/) and
-   generate API credentials under **Manage API Keys**.
-2. `export WEB_EXT_API_KEY='<JWT issuer>'` and
-   `export WEB_EXT_API_SECRET='<JWT secret>'`
-3. `npm run sign:firefox` — Mozilla signs it in a minute or two and a `.xpi`
-   lands in `dist/`.
-4. `about:addons` → gear → **Install Add-on From File…** → select that `.xpi`.
-
-Re-signing requires a unique version: bump `version` in both `package.json` and
-`public/manifest.base.json` first. Details in [docs/firefox.md](docs/firefox.md).
+Note the Add-ons manager's "Install Add-on From File…" only accepts a signed
+`.xpi`; it greys out `manifest.json`.
 
 ### Safari (macOS)
 
-Requires **Xcode** — Safari has no "load unpacked" equivalent that works
-without it.
+Safari has no "load unpacked" equivalent that works without **Xcode**, so this
+one needs the source and a build. There's no download that avoids it.
 
 ```sh
+npm ci
 npm run build:safari
 ```
 
@@ -134,9 +131,7 @@ Connections side panel will open with the matching blocks.
 
 ## Build from source
 
-`npm run build` builds all three targets into `dist/chrome`, `dist/firefox`,
-and `dist/safari`. Build one at a time with `npm run build:chrome`,
-`build:firefox`, or `build:safari`.
+For development, or for Safari, which has no download-and-install path.
 
 ```sh
 npm ci
@@ -144,4 +139,39 @@ npm test
 npm run build
 ```
 
-`npm run package` writes a store-ready zip per target into `dist/`.
+`npm run build` builds all three targets into `dist/chrome`, `dist/firefox`,
+and `dist/safari`. Build one at a time with `npm run build:chrome`,
+`build:firefox`, or `build:safari`. Load the resulting `dist/<target>` folder
+using your browser's steps above (Chrome: **Load unpacked**; Firefox:
+**Load Temporary Add-on…** on `dist/firefox/manifest.json`).
+
+`dist/` is a build artifact and is not committed — that's why installing
+without building means downloading a release.
+
+### Cutting a release
+
+`npm run package` rebuilds every target from source and writes the release
+zips into `dist/`. Pushing a `v<version>` tag runs
+[the release workflow](.github/workflows/release.yml), which does the same and
+attaches the results to a GitHub Release:
+
+```sh
+# bump `version` in package.json AND public/manifest.base.json first — they
+# must agree, and the tag must match both
+git tag v0.3.0 && git push origin v0.3.0
+```
+
+Two things worth knowing about the artifacts:
+
+- **Chrome gets two zips.** The plain one keeps the manifest `key` and is what
+  users load unpacked; `*-webstore.zip` has it stripped for Chrome Web Store
+  upload. They are not interchangeable — the `key` pins the extension ID, which
+  pins the OAuth redirect URI registered with Are.na, so loading the store zip
+  unpacked breaks sign-in. Only the plain zip is attached to releases; see
+  [docs/store-readiness.md](docs/store-readiness.md).
+- **The signed Firefox `.xpi` needs AMO credentials.** Set the
+  `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` repository secrets and the
+  workflow signs and attaches it; without them the release still publishes,
+  just without an `.xpi`. Mozilla rejects re-signing a version it has already
+  signed, so every release needs a fresh version number.
+  See [docs/firefox.md](docs/firefox.md).

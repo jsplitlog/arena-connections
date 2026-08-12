@@ -318,6 +318,16 @@ Scaffolding landed on this branch. What's in place, so nobody re-derives it:
   is outside WS4's file ownership for this pass, so it was **not** edited; this
   is a known follow-up, not a silent break — flagging it here and in the
   handoff report.
+  **Resolved:** `.github/workflows/release.yml` now publishes those zips on a
+  `v*` tag and README's "Install" section downloads from the release instead of
+  building. Implementing it surfaced a bug in the recommendation as originally
+  written: `npm run package`'s Chrome zip is **store-ready**, i.e. `key`-stripped,
+  and attaching *that* to a release would have broken OAuth for every Chrome
+  user (no `key` → path-derived extension ID → unregistered
+  `chromiumapp.org` redirect URI). `package.mjs` now emits two Chrome zips —
+  plain (keeps `key`, for load-unpacked installs and releases) and
+  `*-webstore.zip` (stripped, for Store upload) — and the workflow excludes the
+  latter. See `docs/store-readiness.md`.
 - **`scripts/package.mjs`** now builds each requested target
   (`npm run build:<target>`, so it always packages current source, never a
   stale `dist/`) and zips it to `dist/arena-connections-<target>-<version>.zip`

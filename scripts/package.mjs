@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-// Builds each requested target and zips its dist/<target>/ output into a
-// store-ready dist/arena-connections-<target>-<version>.zip. See
+// Builds each requested target and zips its dist/<target>/ output into
+// dist/arena-connections-<target>-<version>.zip — the artifact users install,
+// and what .github/workflows/release.yml attaches to a GitHub Release. Chrome
+// additionally gets a `key`-stripped *-webstore.zip for Store upload; see the
+// stripChromeKey comment below for why the two cannot be swapped. See
 // docs/cross-browser-plan.md's WS4 section for the acceptance criteria this
 // implements.
 //
@@ -41,15 +44,34 @@ const assertZipAvailable = () => {
   }
 };
 
-// Chrome's `key` manifest field pins a stable extension ID for local unpacked
-// development reloads. The Chrome Web Store assigns its own ID on publish and
-// rejects/ignores a `key` in an uploaded package, so store-ready zips must not
-// contain it. dist/chrome/manifest.json on disk (what "Load unpacked" reads)
-// is left untouched — the field is stripped only in a staging copy used for
-// the zip.
+// Chrome's `key` manifest field pins a stable extension ID. That ID decides the
+// OAuth redirect URI (`chrome.identity.getRedirectURL('oauth2')` →
+// `https://<extension-id>.chromiumapp.org/oauth2`), and only the pinned ID's URI
+// is registered on the Are.na OAuth application — see docs/store-readiness.md.
+//
+// So Chrome needs two different zips, and shipping the wrong one breaks sign-in:
+//
+//   - Load-unpacked install (what releases hand to users): `key` RETAINED. Drop
+//     it and Chrome derives the ID from the install path, which differs per
+//     machine, so every user gets an unregistered redirect URI and OAuth fails.
+//   - Chrome Web Store upload: `key` STRIPPED, because the Store rejects
+//     packages containing one and assigns its own ID.
+//
+// dist/chrome/manifest.json on disk is never modified; the strip happens only in
+// the staging copy used for the store zip.
 const stripChromeKey = (manifest) => {
   const { key, ...rest } = manifest;
   return rest;
+};
+
+const writeZip = (stagingDir, zipName) => {
+  const zipPath = resolve(root, 'dist', zipName);
+  rmSync(zipPath, { force: true });
+  // -X: drop extra file attributes/timestamps for a more reproducible archive; -r: recurse.
+  // -x: keep Finder droppings (.DS_Store etc.) out of store uploads.
+  execFileSync('zip', ['-r', '-X', zipPath, '.', '-x', '.*', '*/.*'], { cwd: stagingDir, stdio: 'inherit' });
+  console.log(`Wrote dist/${zipName}`);
+  return zipPath;
 };
 
 const packageTarget = (target) => {
@@ -73,20 +95,28 @@ const packageTarget = (target) => {
   const staging = mkdtempSync(resolve(tmpdir(), `arena-connections-${target}-`));
   try {
     cpSync(distDir, staging, { recursive: true });
+
+    // The plain <target> name is always the artifact a user installs, so it is
+    // the one release workflows and README can point at without qualification.
+    const zips = [writeZip(staging, `arena-connections-${target}-${version}.zip`)];
+
     if (target === 'chrome') {
       const manifestPath = resolve(staging, 'manifest.json');
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      if (manifest.key === undefined) {
+        console.error(
+          'dist/chrome/manifest.json has no `key` field. The load-unpacked zip just written ' +
+            'would give every user a different extension ID and a redirect URI that is not ' +
+            'registered with Are.na, so OAuth sign-in would fail. Restore `key` in ' +
+            'public/manifest.chrome.json (see docs/store-readiness.md).',
+        );
+        process.exit(1);
+      }
       writeFileSync(manifestPath, `${JSON.stringify(stripChromeKey(manifest), null, 2)}\n`);
+      zips.push(writeZip(staging, `arena-connections-chrome-${version}-webstore.zip`));
     }
 
-    const zipName = `arena-connections-${target}-${version}.zip`;
-    const zipPath = resolve(root, 'dist', zipName);
-    rmSync(zipPath, { force: true });
-    // -X: drop extra file attributes/timestamps for a more reproducible archive; -r: recurse.
-    // -x: keep Finder droppings (.DS_Store etc.) out of store uploads.
-    execFileSync('zip', ['-r', '-X', zipPath, '.', '-x', '.*', '*/.*'], { cwd: staging, stdio: 'inherit' });
-    console.log(`Wrote dist/${zipName}`);
-    return zipPath;
+    return zips;
   } finally {
     rmSync(staging, { recursive: true, force: true });
   }
@@ -94,6 +124,12 @@ const packageTarget = (target) => {
 
 assertZipAvailable();
 mkdirSync(resolve(root, 'dist'), { recursive: true });
-const zips = targets.map(packageTarget);
-console.log(`\nPackaged ${zips.length} target${zips.length === 1 ? '' : 's'}:`);
+const zips = targets.flatMap(packageTarget);
+console.log(`\nPackaged ${targets.length} target${targets.length === 1 ? '' : 's'}:`);
 for (const zip of zips) console.log(`  ${zip}`);
+if (targets.includes('chrome')) {
+  console.log(
+    '\nNote: the plain chrome zip is the load-unpacked install artifact (keeps `key`).\n' +
+      'Upload the *-webstore.zip to the Chrome Web Store instead — see docs/store-readiness.md.',
+  );
+}

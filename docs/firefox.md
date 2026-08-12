@@ -112,6 +112,23 @@ Notes:
   update manifest. Without one, updating means re-installing the new file by
   hand. Fine for personal use; worth adding if others start using it.
 
+### Signing in CI
+
+`.github/workflows/release.yml` runs the same `npm run sign:firefox` on a
+`v*` tag and attaches the resulting `.xpi` to the GitHub Release, which is
+where README sends Firefox users. It needs `WEB_EXT_API_KEY` and
+`WEB_EXT_API_SECRET` as **repository secrets** (Settings → Secrets and
+variables → Actions) — the same credentials as the local flow above.
+
+Signing is deliberately non-blocking: if the secrets are absent the workflow
+logs a warning, and if AMO rejects or times out the step is allowed to fail.
+Either way the release still publishes with the Chrome and Safari zips, just
+without an `.xpi`, and Firefox users fall back to a temporary add-on until a
+later release carries one. The most common rejection is re-signing a version
+AMO has already seen, which is why every release needs a version bump in both
+`package.json` and `public/manifest.base.json` (enforced by
+`scripts/check-release-version.mjs` before packaging).
+
 ## OAuth redirect URI — registered, working
 
 The Firefox redirect URI is:

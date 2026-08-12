@@ -47,7 +47,9 @@ afterAll(() => {
 
 describe('distribution scaffold', () => {
   it('documents unpacked installation and the OAuth connection path', () => {
-    expect(readme).toContain('Download ZIP');
+    // dist/ is git-ignored, so the install path is a release download rather
+    // than the old "Code → Download ZIP" of the source tree.
+    expect(readme).toContain('releases/latest');
     expect(readme).toContain('npm ci');
     expect(readme).toContain('npm run build');
     expect(readme).toContain('chrome://extensions');
@@ -72,5 +74,38 @@ describe('distribution scaffold', () => {
     const extensionId = [...digest].map((digit) => String.fromCharCode('a'.charCodeAt(0) + Number.parseInt(digit, 16))).join('');
 
     expect(extensionId).toBe('poolkoglmiobmahcbamkbhljhgeooajm');
+  });
+});
+
+// The extension ID pinned above is exactly what makes these two artifacts
+// non-interchangeable: it is derived from the manifest `key`, and it decides
+// the chromiumapp.org OAuth redirect URI registered with Are.na. Ship a
+// `key`-stripped zip as the load-unpacked download and Chrome falls back to a
+// path-derived ID, so sign-in fails for every user. These are text-level
+// guards — running the real packaging means a full tsc + vite build per target,
+// which `npm test` deliberately does not pay for (see the note above).
+describe('release artifacts', () => {
+  const packageScript = readFileSync(resolve(root, 'scripts/package.mjs'), 'utf8');
+  const releaseWorkflow = readFileSync(resolve(root, '.github/workflows/release.yml'), 'utf8');
+
+  it('zips the load-unpacked Chrome artifact before stripping the manifest key', () => {
+    const installZip = packageScript.indexOf('`arena-connections-${target}-${version}.zip`');
+    const stripsKey = packageScript.indexOf('stripChromeKey(manifest)');
+    const storeZip = packageScript.indexOf('-webstore.zip`');
+
+    expect(installZip).toBeGreaterThan(-1);
+    expect(stripsKey).toBeGreaterThan(-1);
+    expect(storeZip).toBeGreaterThan(-1);
+    // Strip the key first and the install zip inherits it, silently breaking OAuth.
+    expect(installZip).toBeLessThan(stripsKey);
+    expect(stripsKey).toBeLessThan(storeZip);
+  });
+
+  it('keeps the store-only Chrome zip out of the published release', () => {
+    expect(releaseWorkflow).toContain('!dist/*-webstore.zip');
+  });
+
+  it('checks the tag against both version files before packaging', () => {
+    expect(releaseWorkflow).toContain('scripts/check-release-version.mjs');
   });
 });
