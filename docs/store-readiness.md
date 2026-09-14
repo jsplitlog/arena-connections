@@ -10,6 +10,19 @@ one item with a hard ordering constraint is the OAuth redirect URI below —
 it cannot be registered until a draft upload has reserved the Store's
 extension ID, and sign-in is broken for every Store user until it is.
 
+**Status, 2026-09-13:** paused with an unpublished draft in the dashboard. The
+developer account exists and the package is uploaded, so the extension ID has
+been minted. Still to do: the Store listing fields, the Privacy practices tab,
+screenshots, and the redirect URI registration. Resume by reading the ID off
+the item page URL (`.../devconsole/<publisher-uuid>/<EXTENSION-ID>/edit`).
+
+Note for anyone automating this: the dashboard **cannot** be driven by browser
+automation. Chrome blocks all extension scripting on `chrome.google.com/webstore/*`
+("The extensions gallery cannot be scripted") so that extensions cannot
+manipulate listings or installs. It is not a permission that can be granted,
+and `chromewebstore.google.com/devconsole` redirects back to the blocked
+origin. The fields have to be filled by hand.
+
 ## Manifest `key` and OAuth redirect
 
 `public/manifest.chrome.json` pins a `key` field so the extension keeps a stable ID
@@ -22,12 +35,14 @@ changes the OAuth redirect URI the extension uses
 registered with Are.na before the first store release, sign-in will fail for
 everyone who installs from the Store.
 
-- [ ] Register as a Chrome Web Store developer (one-time $5 USD fee) at
-      https://chrome.google.com/webstore/devconsole.
-- [ ] Do a first draft/private upload to the dashboard (with `key` stripped)
-      to reserve the permanent Store extension ID. **Do not publish yet** —
-      saving the draft is enough to mint the ID, which the dashboard shows on
-      the item's page.
+- [x] Register as a Chrome Web Store developer (one-time $5 USD fee) at
+      https://chrome.google.com/webstore/devconsole — done 2026-09-13,
+      declared **non-trader** (free personal project; a trader account would
+      have to publish a postal address and phone number on the listing).
+- [x] Do a first draft/private upload to the dashboard (with `key` stripped)
+      to reserve the permanent Store extension ID — done 2026-09-13. **Not
+      published**, and it must stay that way until the redirect URI below is
+      registered.
 - [ ] Register that Store ID's `https://<id>.chromiumapp.org/oauth2`
       redirect URI with the Are.na OAuth application, alongside the existing
       unpacked-dev redirect. Are.na's Redirect URI field is a single line and
