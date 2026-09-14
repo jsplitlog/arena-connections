@@ -1,8 +1,11 @@
 name: Pages
 
-# Publishes only site/ — the OAuth redirect page Safari's tab-based sign-in
-# watches for (see src/platform/safari.ts). Deploying that directory rather than
-# the repo root keeps the published surface to exactly one static file.
+# Publishes only site/, which holds the project's two public static pages:
+# oauth2.html, the redirect page Safari's tab-based sign-in watches for (see
+# src/platform/safari.ts), and privacy.html, the hosted privacy policy the
+# Chrome Web Store requires a URL for (see docs/store-readiness.md). Deploying
+# that directory rather than the repo root keeps the published surface to
+# exactly those files — no source, no docs, no build output.
 on:
   push:
     branches: [main]

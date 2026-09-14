@@ -175,3 +175,20 @@ Two things worth knowing about the artifacts:
   just without an `.xpi`. Mozilla rejects re-signing a version it has already
   signed, so every release needs a fresh version number.
   See [docs/firefox.md](docs/firefox.md).
+
+## Privacy
+
+Lookups happen only when you click the extension button, and the only server
+the extension ever contacts is `api.are.na`. There is no analytics, telemetry,
+or third-party tracking of any kind.
+
+The full policy is [PRIVACY.md](PRIVACY.md), published at
+<https://jsplitlog.github.io/arena-connections/privacy.html>. Both copies are
+maintained by hand — edit them together.
+
+## License
+
+[MIT](LICENSE).
+
+Are.na Connections is an unofficial, third-party extension. It is not operated
+by or affiliated with Are.na.
