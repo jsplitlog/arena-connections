@@ -1,6 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#f3f2ef"/>
-  <circle cx="45" cy="64" r="18" fill="none" stroke="#1d1d1b" stroke-width="10"/>
-  <circle cx="83" cy="64" r="18" fill="none" stroke="#1d1d1b" stroke-width="10"/>
-  <path d="M58 64h12" stroke="#1d1d1b" stroke-width="10" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Master for every icons/*.png. Authored on a 16-unit grid because all four
+       shipped sizes (16/32/48/128) are exact integer multiples of it, so each
+       2-unit stroke lands on whole device pixels at every size instead of
+       antialiasing to grey. Caps are butt, not round: at 16px a round cap is
+       wider than the 1px it has to render in, which greys out all four arm tips.
+
+       Regenerate after editing:
+         for s in 16 32 48 128; do
+           inkscape --export-type=png --export-filename=$s.png \
+             --export-width=$s --export-height=$s source.svg
+         done -->
+  <rect width="16" height="16" rx="3.5" fill="#f3f2ef"/>
+  <g stroke="#1d1d1b" stroke-width="2">
+    <path d="M4 5v6M1 8h6"/>
+    <path d="M12 5v6M9 8h6"/>
+  </g>
 </svg>

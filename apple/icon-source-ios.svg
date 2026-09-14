@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- iOS variant of public/icons/source.svg. iOS masks app icons itself and
+       rejects alpha, so this one is a fully opaque square: white ground with
+       the rounded mark inset 148/1024 per side, matching the composition of
+       the icon it replaces. The macOS icons in AppIcon.appiconset use the
+       plain rounded master instead, since macOS wants the rounding baked in
+       with transparent corners.
+
+       Regenerate: see apple/README-icons.md -->
+  <rect width="1024" height="1024" fill="#ffffff"/>
+  <g transform="translate(148 148) scale(45.5)">
+    <rect width="16" height="16" rx="3.5" fill="#f3f2ef"/>
+    <g stroke="#1d1d1b" stroke-width="2">
+      <path d="M4 5v6M1 8h6"/>
+      <path d="M12 5v6M9 8h6"/>
+    </g>
+  </g>
+</svg>
