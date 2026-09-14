@@ -1,10 +1,10 @@
 # Privacy Policy for Are.na Connections
 
-_Last updated: 2026-08-06_
+_Last updated: 2026-09-13_
 
-Are.na Connections is a Chrome extension that shows where the page you are
-viewing appears on Are.na. This policy explains what data the extension
-handles and why.
+Are.na Connections is an unofficial browser extension (Chrome, Firefox, and
+Safari) that shows where the page you are viewing appears on Are.na. This
+policy explains what data the extension handles and why.
 
 ## What the extension does
 
@@ -68,5 +68,6 @@ accordingly.
 
 ## Contact
 
-Questions about this policy or the extension's data handling can be sent
-to: `[TODO: add contact email before publishing]`
+Questions about this policy or the extension's data handling are best raised
+as an issue on the project's GitHub repository:
+[github.com/jsplitlog/arena-connections/issues](https://github.com/jsplitlog/arena-connections/issues).
